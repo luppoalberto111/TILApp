@@ -32,6 +32,7 @@ class SelectUserTableViewController: UITableViewController {
 
   // MARK: - Properties
   var users: [User] = []
+  var selectedUser: User!
 
   // MARK: - View Life Cycle
   override func viewDidLoad() {
@@ -40,12 +41,30 @@ class SelectUserTableViewController: UITableViewController {
   }
 
   func loadData() {
-    
+    let usersRequest = ResourceRequest<User>(resourcePath: "users")
+    usersRequest.getAll { [weak self] result in
+      switch result {
+        
+      case .success(let users):
+        self?.users = users
+        DispatchQueue.main.async {
+          self?.tableView.reloadData()
+        }
+      case .failure:
+        ErrorPresenter.showError(message: "There was an error getting the users.", on: self) { _ in
+          self?.navigationController?.popViewController(animated: true)
+        }
+      }
+    }
   }
 
   // MARK: - Navigation
   override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-
+    if segue.identifier == "UnwindSelectUserSegue" {
+      guard let cell = sender as? UITableViewCell, let indexPath = tableView.indexPath(for: cell) else { return }
+      
+      selectedUser = users[indexPath.row]
+    }
   }
 }
 
@@ -60,6 +79,13 @@ extension SelectUserTableViewController {
     let user = users[indexPath.row]
     let cell = tableView.dequeueReusableCell(withIdentifier: "SelectUserCell", for: indexPath)
     cell.textLabel?.text = user.name
+    
+    if user.name == selectedUser.name {
+      cell.accessoryType = .checkmark
+    } else {
+      cell.accessoryType = .none
+    }
+    
     return cell
   }
 }

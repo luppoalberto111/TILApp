@@ -43,6 +43,24 @@ class CreateAcronymTableViewController: UITableViewController {
   override func viewDidLoad() {
     super.viewDidLoad()
     acronymShortTextField.becomeFirstResponder()
+    populateUsers()
+  }
+  
+  func populateUsers() {
+    let usersRequest = ResourceRequest<User>(resourcePath: "users")
+    
+    usersRequest.getAll { result in
+      switch result {
+      case .success(let users):
+        DispatchQueue.main.async {
+          self.userLabel.text = users[0].name
+        }
+        
+        self.selectedUser = users[0]
+      case .failure:
+        ErrorPresenter.showError(message: "There was an error getting the users", on: self)
+      }
+    }
   }
 
   // MARK: - IBActions
@@ -51,14 +69,48 @@ class CreateAcronymTableViewController: UITableViewController {
   }
 
   @IBAction func save(_ sender: UIBarButtonItem) {
-    navigationController?.popViewController(animated: true)
+    guard let shortText = acronymShortTextField.text, !shortText.isEmpty else {
+      ErrorPresenter.showError(message: "You must specify an acronym!", on: self)
+      return
+    }
+    
+    guard let longText = acronymLongTextField.text, !longText.isEmpty else {
+      ErrorPresenter.showError(message: "You must specify a meaning!", on: self)
+      return
+    }
+    
+    guard let userID = selectedUser?.id else {
+      ErrorPresenter.showError(message: "You must have a user to create an acronym", on: self)
+      return
+    }
+    
+    let acronym = Acronym(short: shortText, long: longText, userID: userID)
+    
+    ResourceRequest<Acronym>(resourcePath: "acronyms")
+      .save(acronym) { [weak self] result in
+        switch result {
+        case .success:
+          DispatchQueue.main.async {
+            self?.navigationController?.popViewController(animated: true)
+          }
+        case .failure:
+          ErrorPresenter.showError(message: "There was a problem saving the acronym", on: self)
+        }
+    }
   }
 
   @IBAction func updateSelectedUser(_ segue: UIStoryboardSegue) {
+    guard let controller = segue.source as? SelectUserTableViewController else { return }
+    
+    selectedUser = controller.selectedUser
+    userLabel.text = selectedUser?.name
   }
 
   // MARK: - Navigation
   override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-
+    if segue.identifier == "SelectUserSegue" {
+      guard let destination = segue.destination as? SelectUserTableViewController, let user = selectedUser else { return }
+      destination.selectedUser = user
+    }
   }
 }

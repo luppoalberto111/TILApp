@@ -47,5 +47,26 @@ class CreateUserTableViewController: UITableViewController {
 
   @IBAction func save(_ sender: Any) {
     navigationController?.popViewController(animated: true)
+    guard let name = nameTextField.text, !name.isEmpty else {
+      ErrorPresenter.showError(message: "You must specify a name", on: self)
+      return
+    }
+    
+    guard let userName = usernameTextField.text, !userName.isEmpty else {
+      ErrorPresenter.showError(message: "You must specify a username", on: self)
+      return
+    }
+    
+    let user = User(name: name, username: userName)
+    ResourceRequest<User>(resourcePath: "users").save(user) { [weak self] result in
+      switch result {
+      case .success:
+        DispatchQueue.main.async {
+          self?.navigationController?.popViewController(animated: true)
+        }
+      case .failure:
+        ErrorPresenter.showError(message: "There was a problem saving the user", on: self)
+      }
+    }
   }
 }
