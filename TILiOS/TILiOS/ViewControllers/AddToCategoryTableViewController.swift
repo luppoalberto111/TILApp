@@ -42,7 +42,18 @@ class AddToCategoryTableViewController: UITableViewController {
   }
 
   func loadData() {
-
+    let request = ResourceRequest<Category>(resourcePath: "categories")
+    request.getAll { [weak self] result in
+      switch result {
+      case .success(let categories):
+        self?.categories = categories
+        DispatchQueue.main.async {
+          self?.tableView.reloadData()
+        }
+      case .failure:
+        ErrorPresenter.showError(message: "There was an error getting the categories", on: self)
+      }
+    }
   }
 }
 
@@ -68,5 +79,25 @@ extension AddToCategoryTableViewController {
     }
 
     return cell
+  }
+  
+  override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+    let category = categories[indexPath.row]
+    guard let acronymId = acronym.id else {
+      ErrorPresenter.showError(message: "There was an error adding the acronym", on: self)
+      return
+    }
+    
+    let request = AcronymRequest(acronymID: acronymId)
+    request.add(category: category) { [weak self] result in
+      switch result {
+      case .success:
+        DispatchQueue.main.async {
+          self?.navigationController?.popViewController(animated: true)
+        }
+      case .failure:
+        ErrorPresenter.showError(message: "There was an error", on: self)
+      }
+    }
   }
 }

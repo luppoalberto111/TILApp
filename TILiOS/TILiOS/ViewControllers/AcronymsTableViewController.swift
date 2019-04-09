@@ -44,6 +44,14 @@ class AcronymsTableViewController: UITableViewController {
     super.viewWillAppear(animated)
     refresh(nil)
   }
+  
+  override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+    if segue.identifier == "AcronymsToAcronymDetail" {
+      guard let destination = segue.destination as? AcronymDetailTableViewController, let indexPath = tableView.indexPathForSelectedRow else { return }
+      
+      destination.acronym = acronyms[indexPath.row]
+    }
+  }
 
   // MARK: - IBActions
   @IBAction func refresh(_ sender: UIRefreshControl?) {
@@ -81,5 +89,15 @@ extension AcronymsTableViewController {
     cell.detailTextLabel?.text = acronym.long
     
     return cell
+  }
+  
+  override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCellEditingStyle, forRowAt indexPath: IndexPath) {
+    if let id = acronyms[indexPath.row].id {
+      let acronymDetailRequester = AcronymRequest(acronymID: id)
+      acronymDetailRequester.delete()
+    }
+    
+    acronyms.remove(at: indexPath.row)
+    tableView.deleteRows(at: [indexPath], with: .automatic)
   }
 }

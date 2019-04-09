@@ -43,7 +43,14 @@ class CreateAcronymTableViewController: UITableViewController {
   override func viewDidLoad() {
     super.viewDidLoad()
     acronymShortTextField.becomeFirstResponder()
-    populateUsers()
+    if let acronym = acronym {
+      acronymShortTextField.text = acronym.short
+      acronymLongTextField.text = acronym.long
+      userLabel.text = selectedUser?.name
+      navigationItem.title = "Edit Acronym"
+    } else {
+      populateUsers()
+    }
   }
   
   func populateUsers() {
@@ -86,16 +93,36 @@ class CreateAcronymTableViewController: UITableViewController {
     
     let acronym = Acronym(short: shortText, long: longText, userID: userID)
     
-    ResourceRequest<Acronym>(resourcePath: "acronyms")
-      .save(acronym) { [weak self] result in
-        switch result {
-        case .success:
-          DispatchQueue.main.async {
-            self?.navigationController?.popViewController(animated: true)
+    if self.acronym != nil {
+      guard let existingId = self.acronym?.id else {
+        ErrorPresenter.showError(message: "There was an error updating the acronym", on: self)
+        return
+      }
+      AcronymRequest(acronymID: existingId)
+        .update(with: acronym) { result in
+          switch result {
+          case .success(let updatedAcronym):
+            self.acronym = updatedAcronym
+            DispatchQueue.main.async { [weak self] in
+              self?.performSegue(withIdentifier: "UpdateAcronymDetails", sender: nil)
+            }
+          case .failure:
+            ErrorPresenter.showError(message: "There was a problem saving the acronym", on: self)
           }
-        case .failure:
-          ErrorPresenter.showError(message: "There was a problem saving the acronym", on: self)
-        }
+      }
+      
+    } else {
+      ResourceRequest<Acronym>(resourcePath: "acronyms")
+        .save(acronym) { [weak self] result in
+          switch result {
+          case .success:
+            DispatchQueue.main.async {
+              self?.navigationController?.popViewController(animated: true)
+            }
+          case .failure:
+            ErrorPresenter.showError(message: "There was a problem saving the acronym", on: self)
+          }
+      }
     }
   }
 
